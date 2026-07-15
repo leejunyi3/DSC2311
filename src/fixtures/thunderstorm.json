@@ -1,0 +1,80 @@
+{
+  "id": "thunderstorm",
+  "name": "Severe Thunderstorm and Lightning",
+  "description": "Heavy rainfall, stronger winds, lightning near the monitoring area, moderate vessel slowdown and increased operational risk.",
+  "narrative": "A severe thunderstorm cell is over western Singapore. Heavy rain and gusty winds are affecting handling, lightning has been observed close to the monitoring area, and vessels are slowing. No regional route disruption is active.",
+  "sourceAgreement": 0.85,
+  "weather": {
+    "rainfallMmPerHr": 24,
+    "windSpeedKnots": 27,
+    "windDirectionDegrees": 200,
+    "temperatureC": 26.1,
+    "relativeHumidityPct": 93,
+    "stationName": "Tuas South (S117)",
+    "ageMinutes": 3
+  },
+  "lightning": {
+    "recentCount": 26,
+    "nearestKm": 4.2,
+    "ageMinutes": 2
+  },
+  "marine": {
+    "waveHeightM": 1.8,
+    "waveDirectionDegrees": 205,
+    "wavePeriodS": 6.4,
+    "windWaveHeightM": 1.4,
+    "swellHeightM": 0.8,
+    "swellDirectionDegrees": 200,
+    "trend": "deteriorating",
+    "locationName": "Tuas waters",
+    "ageMinutes": 18
+  },
+  "vessels": {
+    "count": 31,
+    "baselineCount": 28,
+    "slowMovingCount": 9,
+    "stationaryCount": 4,
+    "averageSpeedKnots": 4.6,
+    "previousCount": 26,
+    "ageMinutes": 2
+  },
+  "disruptions": [
+    {
+      "id": "sim-storm-1",
+      "title": "Thunderstorm advisory for Singapore waters",
+      "event": "Severe thunderstorm / lightning",
+      "location": "Western Singapore / Tuas",
+      "source": "Simulated weather advisory",
+      "sourceCategory": "weather-authority",
+      "summary": "Simulated advisory: severe thunderstorm with frequent lightning over western Singapore waters; short-term handling slowdowns likely.",
+      "severity": "moderate",
+      "routeRelevance": 0.4,
+      "locationRelevance": 0.95,
+      "sourceReliability": 0.8,
+      "supportingSources": 2,
+      "operationalImpact": "Possible temporary suspension of crane / outdoor handling during lightning risk.",
+      "supplyChainImpact": "Minor berthing and gate delays; low inventory impact for well-stocked lines.",
+      "suggestedResponse": "Continue monitoring; expect short handling pauses. No rerouting warranted yet.",
+      "confidence": 70,
+      "ageHours": 1,
+      "active": true
+    }
+  ],
+  "simulatorDefaults": {
+    "cargoType": "general",
+    "criticality": "standard",
+    "coldChain": false,
+    "safetyStockDays": 5,
+    "dailyDemand": 150,
+    "expectedDelayHours": 10,
+    "unitShortageCost": 30,
+    "alternativeKind": "port-klang",
+    "alternativeTransitHours": 30,
+    "additionalHandlingHours": 8,
+    "additionalReroutingCost": 12000,
+    "customerPriority": "priority",
+    "emergencyReplenishmentQty": 0,
+    "emergencyReplenishmentLeadHours": 0,
+    "emergencyReplenishmentCost": 0
+  }
+}

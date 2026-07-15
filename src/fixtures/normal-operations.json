@@ -1,0 +1,59 @@
+{
+  "id": "normal-operations",
+  "name": "Normal Operations",
+  "description": "Calm weather, normal vessel density, no critical disruption, high confidence and sufficient safety stock.",
+  "narrative": "Conditions around Tuas are routine. Weather is calm, estimated congestion is fluid and there are no active maritime disruptions relevant to Singapore. Safety-stock coverage is comfortable.",
+  "sourceAgreement": 0.95,
+  "weather": {
+    "rainfallMmPerHr": 0,
+    "windSpeedKnots": 8,
+    "windDirectionDegrees": 120,
+    "temperatureC": 30.5,
+    "relativeHumidityPct": 74,
+    "stationName": "Tuas South (S117)",
+    "ageMinutes": 4
+  },
+  "lightning": {
+    "recentCount": 0,
+    "nearestKm": null,
+    "ageMinutes": 3
+  },
+  "marine": {
+    "waveHeightM": 0.6,
+    "waveDirectionDegrees": 150,
+    "wavePeriodS": 5.2,
+    "windWaveHeightM": 0.4,
+    "swellHeightM": 0.3,
+    "swellDirectionDegrees": 160,
+    "trend": "stable",
+    "locationName": "Tuas waters",
+    "ageMinutes": 22
+  },
+  "vessels": {
+    "count": 22,
+    "baselineCount": 28,
+    "slowMovingCount": 2,
+    "stationaryCount": 1,
+    "averageSpeedKnots": 8.4,
+    "previousCount": 24,
+    "ageMinutes": 2
+  },
+  "disruptions": [],
+  "simulatorDefaults": {
+    "cargoType": "general",
+    "criticality": "standard",
+    "coldChain": false,
+    "safetyStockDays": 7,
+    "dailyDemand": 120,
+    "expectedDelayHours": 6,
+    "unitShortageCost": 25,
+    "alternativeKind": "port-klang",
+    "alternativeTransitHours": 30,
+    "additionalHandlingHours": 6,
+    "additionalReroutingCost": 8000,
+    "customerPriority": "standard",
+    "emergencyReplenishmentQty": 0,
+    "emergencyReplenishmentLeadHours": 0,
+    "emergencyReplenishmentCost": 0
+  }
+}

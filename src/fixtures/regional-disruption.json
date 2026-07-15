@@ -1,0 +1,100 @@
+{
+  "id": "regional-disruption",
+  "name": "Regional Maritime Disruption",
+  "description": "Higher vessel density, more slow-moving vessels, a simulated route disruption, a 24–48h delay assumption and increased inventory exposure.",
+  "narrative": "A simulated regional route disruption in the Malacca Strait is pushing more traffic through Singapore approaches. Estimated congestion is elevated and a 24–48 hour delay assumption is in effect. Weather itself is unremarkable.",
+  "sourceAgreement": 0.7,
+  "weather": {
+    "rainfallMmPerHr": 2,
+    "windSpeedKnots": 12,
+    "windDirectionDegrees": 90,
+    "temperatureC": 29.4,
+    "relativeHumidityPct": 80,
+    "stationName": "Tuas South (S117)",
+    "ageMinutes": 5
+  },
+  "lightning": {
+    "recentCount": 1,
+    "nearestKm": 21,
+    "ageMinutes": 6
+  },
+  "marine": {
+    "waveHeightM": 1.1,
+    "waveDirectionDegrees": 110,
+    "wavePeriodS": 5.8,
+    "windWaveHeightM": 0.7,
+    "swellHeightM": 0.6,
+    "swellDirectionDegrees": 120,
+    "trend": "stable",
+    "locationName": "Singapore Strait",
+    "ageMinutes": 26
+  },
+  "vessels": {
+    "count": 47,
+    "baselineCount": 28,
+    "slowMovingCount": 15,
+    "stationaryCount": 7,
+    "averageSpeedKnots": 3.6,
+    "previousCount": 39,
+    "ageMinutes": 3
+  },
+  "disruptions": [
+    {
+      "id": "sim-malacca-1",
+      "title": "Simulated Malacca Strait transit disruption",
+      "event": "Regional route disruption",
+      "location": "Malacca Strait",
+      "source": "Simulated maritime advisory",
+      "sourceCategory": "maritime-news",
+      "summary": "Simulated advisory: reduced transit throughput in the Malacca Strait diverting traffic and adding an estimated 24–48h to some arrivals.",
+      "severity": "high",
+      "routeRelevance": 0.9,
+      "locationRelevance": 0.75,
+      "sourceReliability": 0.65,
+      "supportingSources": 3,
+      "operationalImpact": "Increased vessel density and slow steaming on Singapore approaches.",
+      "supplyChainImpact": "Arrival delays of 24–48h; safety-stock drawdown for time-sensitive lines.",
+      "suggestedResponse": "Prepare for temporary delay; review safety-stock exposure; consider selective rerouting for critical cargo.",
+      "confidence": 62,
+      "ageHours": 6,
+      "active": true
+    },
+    {
+      "id": "sim-congestion-note",
+      "title": "Elevated approach congestion (estimated)",
+      "event": "Estimated congestion increase",
+      "location": "Tuas approaches",
+      "source": "AIS analytical estimate",
+      "sourceCategory": "sensor-estimate",
+      "summary": "Estimated congestion elevated from AIS density and slow-vessel ratio. Not official PSA data.",
+      "severity": "moderate",
+      "routeRelevance": 0.5,
+      "locationRelevance": 0.9,
+      "sourceReliability": 0.6,
+      "supportingSources": 1,
+      "operationalImpact": "Longer approach and berth-wait estimates.",
+      "supplyChainImpact": "Compounds regional delay for arriving boxes.",
+      "suggestedResponse": "Monitor congestion trend; confirm actual berth status with the operator.",
+      "confidence": 55,
+      "ageHours": 1,
+      "active": true
+    }
+  ],
+  "simulatorDefaults": {
+    "cargoType": "industrial",
+    "criticality": "high",
+    "coldChain": false,
+    "safetyStockDays": 3,
+    "dailyDemand": 200,
+    "expectedDelayHours": 36,
+    "unitShortageCost": 45,
+    "alternativeKind": "tanjung-pelepas",
+    "alternativeTransitHours": 20,
+    "additionalHandlingHours": 8,
+    "additionalReroutingCost": 26000,
+    "customerPriority": "priority",
+    "emergencyReplenishmentQty": 400,
+    "emergencyReplenishmentLeadHours": 20,
+    "emergencyReplenishmentCost": 30000
+  }
+}

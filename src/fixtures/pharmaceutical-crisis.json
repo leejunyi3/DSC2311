@@ -1,0 +1,100 @@
+{
+  "id": "pharmaceutical-crisis",
+  "name": "Pharmaceutical Resilience Crisis",
+  "description": "A critical cold-chain pharmaceutical container amid severe thunderstorm and lightning near Tuas, increased estimated congestion and a relevant Malacca Strait disruption. Safety stock 1.5 days, 24–48h expected delay.",
+  "narrative": "A critical pharmaceutical container with a cold-chain requirement is inbound while a severe thunderstorm with lightning sits over Tuas, estimated congestion is elevated and a relevant Malacca Strait disruption is active. Safety stock is only 1.5 days against a 24–48h expected delay. Options: wait, reroute, or emergency replenishment.",
+  "sourceAgreement": 0.68,
+  "weather": {
+    "rainfallMmPerHr": 21,
+    "windSpeedKnots": 25,
+    "windDirectionDegrees": 210,
+    "temperatureC": 26.6,
+    "relativeHumidityPct": 92,
+    "stationName": "Tuas South (S117)",
+    "ageMinutes": 3
+  },
+  "lightning": {
+    "recentCount": 22,
+    "nearestKm": 5.1,
+    "ageMinutes": 2
+  },
+  "marine": {
+    "waveHeightM": 1.7,
+    "waveDirectionDegrees": 208,
+    "wavePeriodS": 6.2,
+    "windWaveHeightM": 1.3,
+    "swellHeightM": 0.8,
+    "swellDirectionDegrees": 205,
+    "trend": "deteriorating",
+    "locationName": "Tuas waters",
+    "ageMinutes": 17
+  },
+  "vessels": {
+    "count": 44,
+    "baselineCount": 28,
+    "slowMovingCount": 14,
+    "stationaryCount": 6,
+    "averageSpeedKnots": 3.8,
+    "previousCount": 37,
+    "ageMinutes": 2
+  },
+  "disruptions": [
+    {
+      "id": "sim-pharma-malacca",
+      "title": "Simulated Malacca Strait disruption affecting inbound pharma",
+      "event": "Regional route disruption",
+      "location": "Malacca Strait",
+      "source": "Simulated maritime advisory",
+      "sourceCategory": "maritime-news",
+      "summary": "Simulated advisory: Malacca Strait disruption adding an estimated 24–48h to some Singapore-bound arrivals, including a critical pharmaceutical container.",
+      "severity": "high",
+      "routeRelevance": 0.92,
+      "locationRelevance": 0.8,
+      "sourceReliability": 0.66,
+      "supportingSources": 3,
+      "operationalImpact": "Slow steaming and increased approach density into Tuas.",
+      "supplyChainImpact": "24–48h delay against 1.5 days of cold-chain safety stock; high spoilage/service risk.",
+      "suggestedResponse": "Prioritise cold-chain cargo; compare wait vs reroute vs emergency replenishment; escalate for human decision.",
+      "confidence": 60,
+      "ageHours": 4,
+      "active": true
+    },
+    {
+      "id": "sim-pharma-storm",
+      "title": "Severe thunderstorm and lightning near Tuas",
+      "event": "Severe thunderstorm / lightning",
+      "location": "Tuas / western Singapore",
+      "source": "Simulated weather advisory",
+      "sourceCategory": "weather-authority",
+      "summary": "Simulated advisory: lightning within ~5km of the monitoring point; outdoor handling pauses likely.",
+      "severity": "moderate",
+      "routeRelevance": 0.35,
+      "locationRelevance": 0.95,
+      "sourceReliability": 0.8,
+      "supportingSources": 2,
+      "operationalImpact": "Temporary handling suspensions during lightning risk.",
+      "supplyChainImpact": "Compounds the arrival delay for the cold-chain container.",
+      "suggestedResponse": "Monitor lightning; protect cold-chain reefer power/temperature continuity.",
+      "confidence": 68,
+      "ageHours": 1,
+      "active": true
+    }
+  ],
+  "simulatorDefaults": {
+    "cargoType": "pharmaceuticals",
+    "criticality": "critical",
+    "coldChain": true,
+    "safetyStockDays": 1.5,
+    "dailyDemand": 500,
+    "expectedDelayHours": 36,
+    "unitShortageCost": 80,
+    "alternativeKind": "tanjung-pelepas",
+    "alternativeTransitHours": 18,
+    "additionalHandlingHours": 6,
+    "additionalReroutingCost": 40000,
+    "customerPriority": "key-account",
+    "emergencyReplenishmentQty": 1000,
+    "emergencyReplenishmentLeadHours": 12,
+    "emergencyReplenishmentCost": 90000
+  }
+}
