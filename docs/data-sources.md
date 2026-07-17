@@ -44,15 +44,20 @@ Every provider is a replaceable interface returning a classified `DataEnvelope`.
 - **Limitations:** positions can be sparse, delayed or spoofed. The AIS key is
   used only by the collector and never reaches the browser.
 
-## Maritime disruptions
+## Maritime disruptions — reputable maritime-news RSS
 
-- Disabled by default (`ENABLE_LIVE_DISRUPTIONS=false`). A production
-  implementation should use a documented, citation-bearing source (Claude web
-  search with citations, GDELT, or official advisories) and map each item to the
-  `Disruption` shape with title, source, timestamps, location, summary, severity,
-  Tuas relevance, source reliability, confidence, URL/citation and data status.
-- **Limitation:** not every article mentioning Singapore is an active incident;
-  the risk engine applies recency decay and relevance weighting.
+- **Sources:** keyless RSS feeds from established shipping outlets (gCaptain,
+  Splash247, The Loadstar). Enabled with `ENABLE_LIVE_DISRUPTIONS=true`.
+- **Normalisation:** items are filtered to disruption/incident types (collision,
+  congestion, closure, strike, grounding, storm, …), deduped, and mapped to the
+  `Disruption` shape. Severity and Tuas relevance are **derived heuristically**;
+  Singapore / Malacca / Tuas items rank first and global items get low relevance
+  so they contribute little to risk.
+- **Limitation:** each item is a NEWS ARTICLE, not a confirmed incident — not
+  every article is an active disruption. The risk engine applies recency decay
+  and relevance weighting.
+- **Note:** GDELT was the original source but its API host is unreachable from
+  some networks; RSS is more reliable and equally keyless.
 
 ## Claude API
 

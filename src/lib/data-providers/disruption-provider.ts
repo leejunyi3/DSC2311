@@ -1,57 +1,38 @@
 /**
- * Maritime disruption provider (§11) — LIVE via GDELT DOC 2.0.
+ * Maritime disruption provider (§11) — LIVE via reputable maritime-news RSS.
  *
- * GDELT is a keyless, open global-news API. We query recent maritime news
- * relevant to Tuas / Singapore / the Malacca Strait and map each article to the
- * Disruption shape. GDELT returns only thin metadata (title, domain, date), so
- * severity, location and relevance are DERIVED heuristically and each item is
- * clearly a NEWS ARTICLE, not a confirmed incident (§11: "Do not treat every
- * article mentioning Singapore as an active incident"). Results are cached for
- * 10 minutes to respect GDELT's rate guidance.
+ * We aggregate keyless RSS feeds from established shipping-news outlets
+ * (gCaptain, Splash247, The Loadstar), keep only disruption-type items, and map
+ * each to the Disruption shape. Severity and Tuas relevance are DERIVED
+ * heuristically — each item is a NEWS ARTICLE, not a confirmed incident (§11:
+ * "Do not treat every article mentioning Singapore as an active incident").
+ * Global items get low relevance so they contribute little to risk; Singapore /
+ * Malacca / Tuas items rank first. Results cache for 10 minutes.
  *
- * Docs: https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/
+ * (GDELT was the original source but its API host is unreachable from some
+ * networks; RSS is more reliable and needs no key.)
  */
 
 import type { Disruption, DisruptionSeverity } from "@/types";
-import { gdeltDocSchema } from "@/lib/schemas/providers";
-import { safeFetchJson } from "@/lib/utils/fetch";
 import { cacheGet, cacheSet } from "@/lib/cache/memory-cache";
 
-const CACHE_KEY = "gdelt:disruptions";
+const CACHE_KEY = "disruptions:rss";
 const CACHE_TTL_SECONDS = 600;
 
-const QUERY =
-  '(Singapore OR Malacca OR Tuas OR "Singapore Strait") ' +
-  "(port OR shipping OR vessel OR strait OR container OR cargo OR maritime) " +
-  "(disruption OR congestion OR collision OR closure OR delay OR grounding OR accident OR blockage OR strike OR piracy)";
+const FEEDS: ReadonlyArray<{ name: string; url: string }> = [
+  { name: "gCaptain", url: "https://gcaptain.com/feed/" },
+  { name: "Splash247", url: "https://splash247.com/feed/" },
+  { name: "The Loadstar", url: "https://theloadstar.com/feed/" },
+];
 
-const GDELT_URL =
-  "https://api.gdeltproject.org/api/v2/doc/doc?query=" +
-  encodeURIComponent(QUERY) +
-  "&mode=artlist&format=json&maxrecords=25&timespan=10d&sort=datedesc";
-
-// Keep only clearly-maritime titles to avoid "every Singapore article" noise.
-const MARITIME_RE =
-  /\b(port|ship|shipping|vessel|strait|cargo|container|maritime|berth|tanker|freight|dock|terminal|tug|barge|anchorage|reefer)\b/i;
+// Keep only disruption/incident-type items.
+const DISRUPTION_RE =
+  /\b(disrupt|congest|delay|collision|closure|closed|blockage|blocked|grounding|grounded|accident|capsiz|sank|sunk|fire|explosion|attack|piracy|hijack|strike|shutdown|suspend|detain|backlog|diver(t|sion)|rerout|sanction|blockade|incident|breakdown|outage|typhoon|storm|cyclone)\b/i;
 
 const HIGH_RE =
-  /\b(collision|closure|closed|blockage|blocked|grounding|grounded|accident|capsiz|sank|sunk|fire|explosion|attack|piracy|hijack|strike|shutdown)\b/i;
+  /\b(collision|closure|closed|blockade|blockage|blocked|grounding|grounded|capsiz|sank|sunk|fire|explosion|attack|piracy|hijack|strike|shutdown|blockade)\b/i;
 const MOD_RE =
-  /\b(congestion|delay|delayed|disruption|backlog|incident|slowdown|diversion|reroute|detained|breakdown)\b/i;
-
-const RELIABLE_DOMAINS = new Set([
-  "reuters.com",
-  "bloomberg.com",
-  "maritime-executive.com",
-  "tradewindsnews.com",
-  "lloydslist.com",
-  "splash247.com",
-  "gcaptain.com",
-  "seatrade-maritime.com",
-  "channelnewsasia.com",
-  "straitstimes.com",
-  "businesstimes.com.sg",
-]);
+  /\b(congest|delay|disrupt|backlog|incident|slowdown|diver(t|sion)|rerout|detain|breakdown|suspend|storm|typhoon|cyclone)\b/i;
 
 function hashId(input: string): string {
   let h = 2166136261 >>> 0;
@@ -59,55 +40,88 @@ function hashId(input: string): string {
     h ^= input.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
-  return `gdelt-${(h >>> 0).toString(36)}`;
+  return `rss-${(h >>> 0).toString(36)}`;
 }
 
-/** GDELT seendate is "YYYYMMDDTHHMMSSZ". */
-function parseSeenDate(s: string | undefined): string {
-  if (!s) return new Date().toISOString();
-  const m = s.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
-  if (!m) return new Date().toISOString();
-  const [, y, mo, d, h, mi, se] = m;
-  const iso = `${y}-${mo}-${d}T${h}:${mi}:${se}Z`;
-  const t = new Date(iso);
-  return Number.isNaN(t.getTime()) ? new Date().toISOString() : t.toISOString();
+function safeCodePoint(n: number): string {
+  try {
+    return n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : "";
+  } catch {
+    return "";
+  }
 }
 
-function severityOf(title: string): DisruptionSeverity {
-  if (HIGH_RE.test(title)) return "high";
-  if (MOD_RE.test(title)) return "moderate";
+function clean(s: string): string {
+  return s
+    .replace(/<!\[CDATA\[|\]\]>/g, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => safeCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, n) => safeCodePoint(Number(n)))
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tag(block: string, name: string): string {
+  const m = block.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`, "i"));
+  return m ? m[1]! : "";
+}
+
+interface RawItem {
+  title: string;
+  link: string;
+  pubDate: string;
+  description: string;
+  source: string;
+}
+
+function parseRss(xml: string, source: string): RawItem[] {
+  const items: RawItem[] = [];
+  const blocks = xml.split(/<item[\s>]/i).slice(1);
+  for (const raw of blocks) {
+    const block = raw.split(/<\/item>/i)[0] ?? "";
+    const title = clean(tag(block, "title"));
+    if (!title) continue;
+    items.push({
+      title,
+      link: clean(tag(block, "link")),
+      pubDate: tag(block, "pubDate").trim(),
+      description: clean(tag(block, "description")).slice(0, 400),
+      source,
+    });
+  }
+  return items;
+}
+
+function severityOf(text: string): DisruptionSeverity {
+  if (HIGH_RE.test(text)) return "high";
+  if (MOD_RE.test(text)) return "moderate";
   return "low";
 }
 
-function relevanceOf(title: string): {
+function relevanceOf(text: string): {
   location: string;
   routeRelevance: number;
   locationRelevance: number;
 } {
-  const t = title.toLowerCase();
+  const t = text.toLowerCase();
   if (t.includes("tuas"))
     return { location: "Tuas", routeRelevance: 0.7, locationRelevance: 0.95 };
   if (t.includes("malacca") || t.includes("melaka"))
-    return {
-      location: "Malacca Strait",
-      routeRelevance: 0.9,
-      locationRelevance: 0.75,
-    };
-  if (t.includes("singapore strait"))
-    return {
-      location: "Singapore Strait",
-      routeRelevance: 0.8,
-      locationRelevance: 0.85,
-    };
+    return { location: "Malacca Strait", routeRelevance: 0.9, locationRelevance: 0.75 };
   if (t.includes("singapore"))
     return { location: "Singapore", routeRelevance: 0.6, locationRelevance: 0.8 };
-  return { location: "Regional", routeRelevance: 0.45, locationRelevance: 0.4 };
+  if (/\b(strait|malaysia|indonesia|south china sea|asia|china|vietnam|hong kong)\b/.test(t))
+    return { location: "Asia-Pacific", routeRelevance: 0.5, locationRelevance: 0.45 };
+  return { location: "Global", routeRelevance: 0.35, locationRelevance: 0.25 };
 }
 
-const IMPACT: Record<
-  DisruptionSeverity,
-  { op: string; sc: string; resp: string }
-> = {
+const IMPACT: Record<DisruptionSeverity, { op: string; sc: string; resp: string }> = {
   critical: {
     op: "Major route or port-level disruption reported — verify urgently with the operator.",
     sc: "Significant arrival delays likely; assess safety-stock and reroute options.",
@@ -130,81 +144,107 @@ const IMPACT: Record<
   },
 };
 
+async function fetchFeed(url: string, signal?: AbortSignal): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  const onAbort = () => controller.abort();
+  signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "tuas-resilience-control-tower/0.1 (student project)" },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`RSS ${res.status}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", onAbort);
+  }
+}
+
+const SEV_ORDER: Record<DisruptionSeverity, number> = {
+  critical: 3,
+  high: 2,
+  moderate: 1,
+  low: 0,
+};
+
 export async function fetchLiveDisruptions(
   signal?: AbortSignal,
 ): Promise<Disruption[]> {
   const cached = cacheGet<Disruption[]>(CACHE_KEY);
   if (cached && !cached.expired) return cached.value;
 
-  const json = await safeFetchJson<unknown>(GDELT_URL, {
-    // GDELT throttles rapid queries; a single attempt + the 10-min cache keeps
-    // us well within its rate guidance (retrying a 429 only makes it worse).
-    // Short-ish timeout so a slow/blocked GDELT doesn't hang the live dashboard.
-    timeoutMs: 8000,
-    retries: 0,
-    headers: { "User-Agent": "tuas-resilience-control-tower/0.1 (student project)" },
-    signal,
-  });
-  const parsed = gdeltDocSchema.parse(json);
-  const retrievedAt = new Date().toISOString();
+  const settled = await Promise.allSettled(
+    FEEDS.map(async (f) => ({ source: f.name, xml: await fetchFeed(f.url, signal) })),
+  );
 
-  const seenTitles = new Set<string>();
+  const raw: RawItem[] = [];
+  let anyOk = false;
+  for (const r of settled) {
+    if (r.status === "fulfilled") {
+      anyOk = true;
+      raw.push(...parseRss(r.value.xml, r.value.source));
+    }
+  }
+  if (!anyOk) {
+    throw new Error("All maritime news feeds unreachable.");
+  }
+
+  const retrievedAt = new Date().toISOString();
+  const seen = new Set<string>();
   const disruptions: Disruption[] = [];
 
-  for (const a of parsed.articles) {
-    const title = a.title.trim();
-    if (!title || !MARITIME_RE.test(title)) continue;
+  for (const item of raw) {
+    const text = `${item.title} ${item.description}`;
+    if (!DISRUPTION_RE.test(text)) continue;
 
-    const norm = title.toLowerCase().replace(/\s+/g, " ");
-    if (seenTitles.has(norm)) continue;
-    seenTitles.add(norm);
+    const norm = item.title.toLowerCase().replace(/\s+/g, " ");
+    if (seen.has(norm)) continue;
+    seen.add(norm);
 
-    const severity = severityOf(title);
-    const { location, routeRelevance, locationRelevance } = relevanceOf(title);
-    const domain = a.domain ?? "news";
-    const reliable = RELIABLE_DOMAINS.has(domain);
+    const severity = severityOf(text);
+    const { location, routeRelevance, locationRelevance } = relevanceOf(text);
     const impact = IMPACT[severity];
+    const publishedAt = item.pubDate
+      ? new Date(item.pubDate)
+      : new Date();
 
     disruptions.push({
-      id: hashId(a.url),
-      title,
+      id: hashId(item.link || item.title),
+      title: item.title,
       event: severity === "high" ? "Maritime incident (news)" : "Maritime news signal",
       location,
-      source: domain,
-      sourceCategory: "maritime-news (GDELT)",
-      publishedAt: parseSeenDate(a.seendate),
+      source: item.source,
+      sourceCategory: "maritime-news (RSS)",
+      publishedAt: Number.isNaN(publishedAt.getTime())
+        ? retrievedAt
+        : publishedAt.toISOString(),
       retrievedAt,
-      summary: title,
+      summary: item.description || item.title,
       severity,
       routeRelevance,
       locationRelevance,
-      sourceReliability: reliable ? 0.7 : 0.5,
+      sourceReliability: 0.65,
       supportingSources: 1,
       operationalImpact: impact.op,
       supplyChainImpact: impact.sc,
       suggestedResponse: impact.resp,
-      confidence: reliable ? 55 : 45,
+      confidence: 55,
       status: "LIVE",
-      url: a.url,
+      url: item.link || undefined,
       active: true,
     });
-
-    if (disruptions.length >= 10) break;
   }
 
-  // Worst / most-relevant first.
-  const order: Record<DisruptionSeverity, number> = {
-    critical: 3,
-    high: 2,
-    moderate: 1,
-    low: 0,
-  };
+  // Most relevant + most severe first; cap the list.
   disruptions.sort(
-    (x, y) =>
-      order[y.severity] - order[x.severity] ||
-      y.locationRelevance - x.locationRelevance,
+    (a, b) =>
+      b.locationRelevance - a.locationRelevance ||
+      SEV_ORDER[b.severity] - SEV_ORDER[a.severity],
   );
+  const top = disruptions.slice(0, 12);
 
-  cacheSet(CACHE_KEY, disruptions, CACHE_TTL_SECONDS);
-  return disruptions;
+  cacheSet(CACHE_KEY, top, CACHE_TTL_SECONDS);
+  return top;
 }

@@ -52,7 +52,17 @@
       "Bash(git init *)",
       "Bash(git add *)",
       "Bash(grep -Ei '\\\\.env\\($|\\\\.local\\)|secret|\\\\.key$')",
-      "Bash(xargs echo \"  node_modules files staged:\")"
+      "Bash(xargs echo \"  node_modules files staged:\")",
+      "Bash(xargs echo \"  ais snapshot staged:\")",
+      "Bash(git config *)",
+      "Bash(echo \"name: $\\(git config user.name || echo '\\(not set\\)'\\)\")",
+      "Bash(echo \"email: $\\(git config user.email || echo '\\(not set\\)'\\)\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const s=JSON.parse\\(d\\);console.log\\('status:',s.status,'| count:',\\(s.data||[]\\).length,'| err:',s.error&&s.error.message\\);for\\(const x of \\(s.data||[]\\).slice\\(0,8\\)\\)console.log\\('  ['+x.severity+']',x.location,'-',x.summary.slice\\(0,85\\),'\\('+x.source+'\\)'\\)}\\)\")",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/health)",
+      "Bash(echo \"health: $\\(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/health\\)\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const s=JSON.parse\\(d\\);console.log\\('status:',s.status,'| count:',\\(s.data||[]\\).length\\);for\\(const x of \\(s.data||[]\\).slice\\(0,8\\)\\)console.log\\('  ['+x.severity+'/'+x.location+']',x.summary.slice\\(0,90\\),'\\('+x.source+'\\)'\\)}\\)\")",
+      "Bash(grep -Ei '\\\\.env\\\\.local|\\\\.env$')",
+      "Bash(git commit -q -m ' *)"
     ]
   }
 }
