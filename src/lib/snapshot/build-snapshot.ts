@@ -55,7 +55,11 @@ import { cacheGet, cacheSet } from "@/lib/cache/memory-cache";
 import { ageSecondsFrom } from "@/lib/risk/freshness-engine";
 import { SeededRng } from "@/lib/utils/prng";
 import { nowIso } from "@/lib/utils/time";
-import { CONGESTION_DISCLAIMER, MARINE_NAV_DISCLAIMER } from "@/lib/constants/geo";
+import {
+  CONGESTION_DISCLAIMER,
+  MARINE_NAV_DISCLAIMER,
+  LIVE_VESSEL_BASELINE,
+} from "@/lib/constants/geo";
 import { SafeFetchError } from "@/lib/utils/fetch";
 
 export interface BuildSnapshotOptions {
@@ -378,11 +382,17 @@ export async function buildSnapshot(
   const congestionResult: CongestionResult | null = vesselData
     ? calculateCongestion({
         vesselCount: vesselData.vesselCount,
-        baselineVesselCount: fx.vessels.baselineCount,
+        // Live AIS covers the broader Singapore approaches, so use a regional
+        // baseline; demo uses the scenario's Tuas-specific baseline.
+        baselineVesselCount:
+          opts.mode === "live"
+            ? LIVE_VESSEL_BASELINE
+            : fx.vessels.baselineCount,
         slowMovingCount: vesselData.slowMovingCount,
         stationaryCount: vesselData.stationaryCount,
         averageSpeedKnots: vesselData.averageSpeedKnots,
-        previousVesselCount: fx.vessels.previousCount,
+        previousVesselCount:
+          opts.mode === "live" ? null : fx.vessels.previousCount,
       })
     : null;
 

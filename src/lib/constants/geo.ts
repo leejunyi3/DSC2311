@@ -28,6 +28,15 @@ export const AIS_BOUNDING_BOX: [[number, number], [number, number]] = [
   [1.32, 103.72],
 ];
 
+/**
+ * Typical vessel count across the western/central Singapore approaches that the
+ * free AIS feed actually returns. Used as the congestion baseline in LIVE mode
+ * (the free feed covers the broader approaches, not just the Tuas berths), so
+ * the estimate reflects deviation from normal regional traffic rather than
+ * pinning to "Severe". Demo mode uses each scenario's own Tuas baseline.
+ */
+export const LIVE_VESSEL_BASELINE = 70;
+
 export const MARINE_LOCATIONS = {
   tuas: { lat: 1.24, lon: 103.62, label: "Tuas waters" },
   "singapore-strait": { lat: 1.2, lon: 103.75, label: "Singapore Strait" },

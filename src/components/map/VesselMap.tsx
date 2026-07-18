@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -9,7 +9,9 @@ import {
   Circle,
   Popup,
   Tooltip as LTooltip,
+  useMap,
 } from "react-leaflet";
+import type { Vessel } from "@/types";
 import "leaflet/dist/leaflet.css";
 import type { DashboardSnapshot } from "@/types/snapshot";
 import type { VesselMotion } from "@/types";
@@ -26,6 +28,44 @@ const MOTION_STYLE: Record<VesselMotion, { color: string; radius: number }> = {
   stationary: { color: "#ef4444", radius: 7 },
 };
 
+/**
+ * Fit the map to wherever the vessels actually are: tight on Tuas in Demo Mode
+ * (seeded vessels cluster at the port), wider in Live Mode (real AIS spans the
+ * Singapore approaches). Re-fits only when the rounded bounds change, so routine
+ * position jitter doesn't cause constant re-zooming.
+ */
+function FitToVessels({ vessels }: { vessels: Vessel[] }) {
+  const map = useMap();
+  const boundsKey = useMemo(() => {
+    if (vessels.length === 0) return "";
+    let minLat = 90,
+      maxLat = -90,
+      minLon = 180,
+      maxLon = -180;
+    for (const v of vessels) {
+      minLat = Math.min(minLat, v.lat);
+      maxLat = Math.max(maxLat, v.lat);
+      minLon = Math.min(minLon, v.lon);
+      maxLon = Math.max(maxLon, v.lon);
+    }
+    return [minLat, maxLat, minLon, maxLon].map((n) => n.toFixed(2)).join(",");
+  }, [vessels]);
+
+  useEffect(() => {
+    if (!boundsKey) return;
+    const [minLat, maxLat, minLon, maxLon] = boundsKey.split(",").map(Number);
+    map.fitBounds(
+      [
+        [minLat!, minLon!],
+        [maxLat!, maxLon!],
+      ],
+      { padding: [30, 30], maxZoom: 13 },
+    );
+  }, [boundsKey, map]);
+
+  return null;
+}
+
 export default function VesselMap({ snapshot }: { snapshot: DashboardSnapshot }) {
   const [tileError, setTileError] = useState(false);
   const vessels = snapshot.vessels.data?.vessels ?? [];
@@ -40,6 +80,7 @@ export default function VesselMap({ snapshot }: { snapshot: DashboardSnapshot })
         scrollWheelZoom={false}
         attributionControl
       >
+        <FitToVessels vessels={vessels} />
         {!tileError && (
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
