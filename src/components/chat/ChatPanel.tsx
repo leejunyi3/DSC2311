@@ -19,6 +19,22 @@ import {
 import { formatSgTime } from "@/lib/utils/time";
 import { SafeMarkdown } from "./SafeMarkdown";
 
+// Friendly labels for the live "agent thinking" step indicator.
+const TOOL_LABELS: Record<string, string> = {
+  get_dashboard_snapshot: "Reading the live snapshot",
+  get_singapore_weather: "Checking Singapore weather",
+  get_lightning_risk: "Checking lightning activity",
+  get_marine_forecast: "Reading the marine forecast",
+  get_tuas_vessel_snapshot: "Reading vessel positions",
+  get_estimated_congestion: "Assessing Tuas congestion",
+  get_recent_maritime_disruptions: "Scanning maritime disruptions",
+  calculate_resilience_risk: "Calculating resilience risk",
+  run_supply_chain_simulation: "Running supply-chain simulation",
+  compare_response_options: "Comparing response options",
+  search_institutional_knowledge: "Consulting policy knowledge",
+  get_data_source_health: "Checking data-source health",
+};
+
 const SUGGESTIONS = [
   "What is currently affecting Tuas Mega Port?",
   "What is driving the current risk score?",
@@ -49,6 +65,7 @@ export function ChatPanel() {
   const [streaming, setStreaming] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [steps, setSteps] = useState<string[]>([]);
   const lastUserRef = useRef<string>("");
 
   const messages = activeChat?.messages ?? [];
@@ -80,6 +97,7 @@ export function ChatPanel() {
     setInput("");
     setStreaming(true);
     setStatus("thinking");
+    setSteps([]);
 
     try {
       const res = await fetch("/api/chat", {
@@ -108,8 +126,13 @@ export function ChatPanel() {
             type: string;
             text?: string;
             message?: string;
+            name?: string;
           };
           if (payload.type === "status") setStatus(payload.message ?? null);
+          if (payload.type === "thinking") setStatus("thinking");
+          if (payload.type === "tool" && payload.name) {
+            setSteps((prev) => [...prev, payload.name as string]);
+          }
           if (payload.type === "delta" && payload.text) {
             assistantText += payload.text;
             working[working.length - 1] = {
@@ -254,6 +277,30 @@ export function ChatPanel() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
+                {m.role === "assistant" &&
+                  i === messages.length - 1 &&
+                  steps.length > 0 && (
+                    <div className="mb-2 space-y-1 rounded-lg border border-base-600 bg-base-900/40 p-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                        Agent steps
+                      </p>
+                      {steps.map((name, si) => (
+                        <div
+                          key={si}
+                          className="flex items-center gap-1.5 text-[11px] text-slate-400"
+                        >
+                          <span className="text-status-safe">✓</span>
+                          {TOOL_LABELS[name] ?? name}
+                        </div>
+                      ))}
+                      {streaming && !m.content && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-live" />
+                          Reasoning…
+                        </div>
+                      )}
+                    </div>
+                  )}
                 {m.role === "user" ? (
                   <p className="text-sm text-slate-200">{m.content}</p>
                 ) : m.content ? (
@@ -269,7 +316,11 @@ export function ChatPanel() {
                   </div>
                 ) : (
                   <p className="text-sm text-slate-500">
-                    {status === "thinking" ? "Analysing snapshot…" : (status ?? "…")}
+                    {steps.length > 0
+                      ? "Working…"
+                      : status === "thinking"
+                        ? "Analysing snapshot…"
+                        : (status ?? "…")}
                   </p>
                 )}
               </div>

@@ -62,69 +62,95 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Gemini live path (Google AI Studio free tier). ──
+  // The agentic loop runs INSIDE the stream so the client sees each tool the
+  // agent calls in real time ("live agent thinking"), not just the final text.
   if (assistant.provider === "gemini") {
-    try {
-      const system = buildSystemPrompt(snapshot);
-      const contents: GeminiContent[] = trimmed.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      }));
-      const audit: ToolAuditEntry[] = [];
-      let finalText = "";
+    const system = buildSystemPrompt(snapshot);
+    const contents: GeminiContent[] = trimmed.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
 
-      for (let loop = 0; loop < GEMINI_LIMITS.maxToolLoops; loop++) {
-        const resp = await callGemini({
-          system_instruction: { parts: [{ text: system }] },
-          contents,
-          tools: [{ functionDeclarations: GEMINI_FUNCTION_DECLARATIONS }],
-          toolConfig: { functionCallingConfig: { mode: "AUTO" } },
-          generationConfig: {
-            maxOutputTokens: GEMINI_LIMITS.maxOutputTokens,
-            temperature: 0.2,
-          },
-        });
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const send = (obj: unknown) => controller.enqueue(sse(obj));
+        const audit: ToolAuditEntry[] = [];
+        let finalText = "";
+        try {
+          send({ type: "status", message: "assistant" });
 
-        const parts = resp.candidates?.[0]?.content?.parts ?? [];
-        const calls = parts.filter((p) => p.functionCall);
-        const textNow = parts
-          .filter((p) => typeof p.text === "string")
-          .map((p) => p.text)
-          .join("");
-        if (textNow) finalText = textNow;
+          for (let loop = 0; loop < GEMINI_LIMITS.maxToolLoops; loop++) {
+            send({ type: "thinking" });
+            const resp = await callGemini({
+              system_instruction: { parts: [{ text: system }] },
+              contents,
+              tools: [{ functionDeclarations: GEMINI_FUNCTION_DECLARATIONS }],
+              toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+              generationConfig: {
+                maxOutputTokens: GEMINI_LIMITS.maxOutputTokens,
+                temperature: 0.2,
+              },
+            });
 
-        if (calls.length === 0) break;
+            const parts = resp.candidates?.[0]?.content?.parts ?? [];
+            const calls = parts.filter((p) => p.functionCall);
+            const textNow = parts
+              .filter((p) => typeof p.text === "string")
+              .map((p) => p.text)
+              .join("");
+            if (textNow) finalText = textNow;
 
-        // Echo the model's tool-call turn, then answer each call.
-        contents.push({ role: "model", parts });
-        const responseParts: GeminiPart[] = [];
-        for (const call of calls) {
-          const fc = call.functionCall!;
-          const exec = executeTool(fc.name, fc.args, snapshot);
-          audit.push(exec.audit);
-          responseParts.push({
-            functionResponse: {
-              name: fc.name,
-              response: { result: exec.content },
-            },
+            if (calls.length === 0) break;
+
+            contents.push({ role: "model", parts });
+            const responseParts: GeminiPart[] = [];
+            for (const call of calls) {
+              const fc = call.functionCall!;
+              // Emit the tool step BEFORE executing it — this is the live status.
+              send({ type: "tool", name: fc.name });
+              const exec = executeTool(fc.name, fc.args, snapshot);
+              audit.push(exec.audit);
+              responseParts.push({
+                functionResponse: {
+                  name: fc.name,
+                  response: { result: exec.content },
+                },
+              });
+            }
+            contents.push({ role: "user", parts: responseParts });
+          }
+
+          if (!finalText) {
+            finalText =
+              "I couldn't complete the analysis within the tool-loop limit. Please retry or narrow the question.";
+          }
+
+          const chunkSize = 280;
+          for (let i = 0; i < finalText.length; i += chunkSize) {
+            send({ type: "delta", text: finalText.slice(i, i + chunkSize) });
+          }
+          send({ type: "done", audit, offline: false, error: false });
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Assistant request failed.";
+          send({
+            type: "delta",
+            text: `The assistant encountered an error: ${message}\n\nThe dashboard figures remain available and were computed deterministically.`,
           });
+          send({ type: "done", audit, offline: false, error: true });
+        } finally {
+          controller.close();
         }
-        contents.push({ role: "user", parts: responseParts });
-      }
+      },
+    });
 
-      if (!finalText) {
-        finalText =
-          "I couldn't complete the analysis within the tool-loop limit. Please retry or narrow the question.";
-      }
-      return streamText(finalText, audit, { offline: false });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Assistant request failed.";
-      return streamText(
-        `The assistant encountered an error: ${message}\n\nThe dashboard figures remain available and were computed deterministically.`,
-        [],
-        { offline: false, error: true },
-      );
-    }
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+      },
+    });
   }
 
   // ── Anthropic (Claude) live path: agentic tool loop, then stream. ──
