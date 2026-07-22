@@ -213,13 +213,17 @@ const CANDIDATE_ROUTES: ReadonlyArray<{
   handlingHours: number;
   reroutingCost: number;
 }> = [
-  { kind: "jurong-port", transitHours: 8, handlingHours: 4, reroutingCost: 12_000 },
-  { kind: "tanjung-pelepas", transitHours: 14, handlingHours: 6, reroutingCost: 38_000 },
-  { kind: "batam", transitHours: 14, handlingHours: 4, reroutingCost: 22_000 },
-  { kind: "johor-pasir-gudang", transitHours: 16, handlingHours: 6, reroutingCost: 20_000 },
-  { kind: "port-klang", transitHours: 30, handlingHours: 8, reroutingCost: 45_000 },
-  { kind: "penang", transitHours: 60, handlingHours: 8, reroutingCost: 70_000 },
-  { kind: "airfreight-changi", transitHours: 10, handlingHours: 4, reroutingCost: 90_000 },
+  // Closest, but Singapore-premium handling rates.
+  { kind: "jurong-port", transitHours: 8, handlingHours: 4, reroutingCost: 30_000 },
+  { kind: "tanjung-pelepas", transitHours: 14, handlingHours: 6, reroutingCost: 18_000 },
+  { kind: "johor-pasir-gudang", transitHours: 16, handlingHours: 6, reroutingCost: 14_000 },
+  // Indonesia — cheapest handling, moderate distance south across the strait.
+  { kind: "batam", transitHours: 16, handlingHours: 6, reroutingCost: 11_000 },
+  // Major Malaysian hub — far, but efficient bulk rates.
+  { kind: "port-klang", transitHours: 30, handlingHours: 8, reroutingCost: 16_000 },
+  { kind: "penang", transitHours: 60, handlingHours: 8, reroutingCost: 22_000 },
+  // Fastest but premium.
+  { kind: "airfreight-changi", transitHours: 10, handlingHours: 4, reroutingCost: 85_000 },
 ];
 
 /**
