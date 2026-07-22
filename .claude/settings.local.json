@@ -68,7 +68,12 @@
       "Bash(curl -s \"http://localhost:3000/api/vessels?mode=live&scenario=pharmaceutical-crisis\")",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('vessels:',j.vessels.status,'count',j.vessels.data&&j.vessels.data.vesselCount,'| congestion:',j.congestion.status,j.congestion.data&&j.congestion.data.score,'\\('+\\(\\(j.congestion.data||{}\\).status||''\\)+'\\)'\\)}\\)\")",
       "Bash(curl -s \"http://localhost:3000/api/weather?mode=live&scenario=pharmaceutical-crisis\")",
-      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const s=JSON.parse\\(d\\);console.log\\('status:',s.status,'| station:',s.data&&s.data.stationName,'| temp:',s.data&&s.data.temperatureC,'| rain:',s.data&&s.data.rainfallMmPerHr,'| wind:',s.data&&s.data.windSpeedKnots\\)}\\)\")"
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const s=JSON.parse\\(d\\);console.log\\('status:',s.status,'| station:',s.data&&s.data.stationName,'| temp:',s.data&&s.data.temperatureC,'| rain:',s.data&&s.data.rainfallMmPerHr,'| wind:',s.data&&s.data.windSpeedKnots\\)}\\)\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('vessels err:',j.vessels.error&&j.vessels.error.message\\)}\\)\")",
+      "Bash(node -e \"console.log\\('node global WebSocket:', typeof WebSocket\\)\")",
+      "Bash(curl -s \"http://localhost:3000/api/vessels/debug\")",
+      "Bash(npx tsc *)",
+      "Bash(echo \"tsc:$?\")"
     ]
   }
 }
