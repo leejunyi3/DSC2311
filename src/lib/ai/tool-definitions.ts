@@ -34,7 +34,17 @@ const SIM_PROPERTIES: Record<string, unknown> = {
   unitShortageCost: { type: "number", minimum: 0 },
   alternativeKind: {
     type: "string",
-    enum: ["wait", "tanjung-pelepas", "port-klang", "airfreight-changi", "custom"],
+    enum: [
+      "wait",
+      "tanjung-pelepas",
+      "port-klang",
+      "johor-pasir-gudang",
+      "batam",
+      "penang",
+      "jurong-port",
+      "airfreight-changi",
+      "custom",
+    ],
   },
   alternativeTransitHours: { type: "number", minimum: 0, maximum: 2160 },
   additionalHandlingHours: { type: "number", minimum: 0, maximum: 2160 },

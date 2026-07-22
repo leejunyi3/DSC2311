@@ -203,6 +203,10 @@ export type AlternativeKind =
   | "wait"
   | "tanjung-pelepas"
   | "port-klang"
+  | "johor-pasir-gudang"
+  | "batam"
+  | "penang"
+  | "jurong-port"
   | "airfreight-changi"
   | "custom";
 

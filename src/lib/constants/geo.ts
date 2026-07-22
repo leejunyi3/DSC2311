@@ -65,6 +65,10 @@ export const ALTERNATIVE_PORTS: Record<
     label: "Port of Tanjung Pelepas",
   },
   "port-klang": { lat: 2.9997, lon: 101.3928, label: "Port Klang" },
+  "johor-pasir-gudang": { lat: 1.442, lon: 103.902, label: "Johor Port (Pasir Gudang)" },
+  batam: { lat: 1.157, lon: 104.001, label: "Batam (Batu Ampar)" },
+  penang: { lat: 5.412, lon: 100.363, label: "Penang Port" },
+  "jurong-port": { lat: 1.303, lon: 103.708, label: "Jurong Port" },
   "airfreight-changi": { lat: 1.3644, lon: 103.9915, label: "Changi (airfreight)" },
 };
 

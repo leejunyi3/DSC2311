@@ -15,7 +15,17 @@ import { ErrorState } from "@/components/common/Skeleton";
 const CARGO: CargoClass[] = ["general", "perishables", "pharmaceuticals", "industrial", "medical"];
 const CRIT: ShipmentCriticality[] = ["low", "standard", "high", "critical"];
 const CUST: CustomerPriority[] = ["standard", "priority", "key-account"];
-const ALT: AlternativeKind[] = ["wait", "tanjung-pelepas", "port-klang", "airfreight-changi", "custom"];
+const ALT: AlternativeKind[] = [
+  "wait",
+  "tanjung-pelepas",
+  "port-klang",
+  "johor-pasir-gudang",
+  "batam",
+  "penang",
+  "jurong-port",
+  "airfreight-changi",
+  "custom",
+];
 
 function NumField({
   label,

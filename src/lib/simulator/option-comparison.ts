@@ -20,6 +20,10 @@ const ALTERNATIVE_LABELS: Record<AlternativeKind, string> = {
   wait: "Continue to Tuas and wait",
   "tanjung-pelepas": "Reroute — Port of Tanjung Pelepas",
   "port-klang": "Reroute — Port Klang",
+  "johor-pasir-gudang": "Reroute — Johor Port (Pasir Gudang)",
+  batam: "Reroute — Batam (Indonesia)",
+  penang: "Reroute — Penang Port",
+  "jurong-port": "Reroute — Jurong Port (Singapore)",
   "airfreight-changi": "Emergency airfreight via Changi",
   custom: "User-defined alternative",
 };
