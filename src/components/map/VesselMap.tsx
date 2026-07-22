@@ -6,6 +6,7 @@ import {
   TileLayer,
   CircleMarker,
   Polygon,
+  Polyline,
   Circle,
   Popup,
   Tooltip as LTooltip,
@@ -20,6 +21,7 @@ import {
   TUAS_MONITOR_POINT,
   GEOFENCE_DISCLAIMER,
   STATIONARY_VESSEL_NOTE,
+  ALTERNATIVE_PORTS,
 } from "@/lib/constants/geo";
 
 const MOTION_STYLE: Record<VesselMotion, { color: string; radius: number }> = {
@@ -34,22 +36,32 @@ const MOTION_STYLE: Record<VesselMotion, { color: string; radius: number }> = {
  * Singapore approaches). Re-fits only when the rounded bounds change, so routine
  * position jitter doesn't cause constant re-zooming.
  */
-function FitToVessels({ vessels }: { vessels: Vessel[] }) {
+function FitToVessels({
+  vessels,
+  extra,
+}: {
+  vessels: Vessel[];
+  extra: [number, number][];
+}) {
   const map = useMap();
   const boundsKey = useMemo(() => {
-    if (vessels.length === 0) return "";
+    const points: [number, number][] = [
+      ...vessels.map((v) => [v.lat, v.lon] as [number, number]),
+      ...extra,
+    ];
+    if (points.length === 0) return "";
     let minLat = 90,
       maxLat = -90,
       minLon = 180,
       maxLon = -180;
-    for (const v of vessels) {
-      minLat = Math.min(minLat, v.lat);
-      maxLat = Math.max(maxLat, v.lat);
-      minLon = Math.min(minLon, v.lon);
-      maxLon = Math.max(maxLon, v.lon);
+    for (const [lat, lon] of points) {
+      minLat = Math.min(minLat, lat);
+      maxLat = Math.max(maxLat, lat);
+      minLon = Math.min(minLon, lon);
+      maxLon = Math.max(maxLon, lon);
     }
     return [minLat, maxLat, minLon, maxLon].map((n) => n.toFixed(2)).join(",");
-  }, [vessels]);
+  }, [vessels, extra]);
 
   useEffect(() => {
     if (!boundsKey) return;
@@ -71,6 +83,18 @@ export default function VesselMap({ snapshot }: { snapshot: DashboardSnapshot })
   const vessels = snapshot.vessels.data?.vessels ?? [];
   const lightning = snapshot.lightning.data;
 
+  // Reroute path: draw a line from Tuas to the scenario's alternative port.
+  const altKind = snapshot.simulatorDefaults.alternativeKind;
+  const port = ALTERNATIVE_PORTS[altKind];
+  const isRecommendedReroute = snapshot.simulation.recommendedKind === altKind;
+  const routeColor = isRecommendedReroute ? "#10b981" : "#f59e0b";
+  const rerouteExtra: [number, number][] = port
+    ? [
+        [TUAS_MONITOR_POINT.lat, TUAS_MONITOR_POINT.lon],
+        [port.lat, port.lon],
+      ]
+    : [];
+
   return (
     <div className="relative h-[420px] w-full overflow-hidden rounded-xl border border-base-600">
       <MapContainer
@@ -80,7 +104,7 @@ export default function VesselMap({ snapshot }: { snapshot: DashboardSnapshot })
         scrollWheelZoom={false}
         attributionControl
       >
-        <FitToVessels vessels={vessels} />
+        <FitToVessels vessels={vessels} extra={rerouteExtra} />
         {!tileError && (
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -109,6 +133,58 @@ export default function VesselMap({ snapshot }: { snapshot: DashboardSnapshot })
               {lightning.recentCount} recent
             </LTooltip>
           </Circle>
+        )}
+
+        {/* Reroute path: Tuas → alternative port (green if recommended). */}
+        {port && (
+          <>
+            <Polyline
+              positions={[
+                [TUAS_MONITOR_POINT.lat, TUAS_MONITOR_POINT.lon],
+                [port.lat, port.lon],
+              ]}
+              pathOptions={{
+                color: routeColor,
+                weight: 3,
+                opacity: 0.85,
+                dashArray: "10 8",
+              }}
+            >
+              <LTooltip sticky>
+                Reroute option: Tuas → {port.label}
+                {isRecommendedReroute ? " (recommended)" : ""}
+              </LTooltip>
+            </Polyline>
+            <CircleMarker
+              center={[port.lat, port.lon]}
+              radius={8}
+              pathOptions={{
+                color: routeColor,
+                fillColor: routeColor,
+                fillOpacity: 0.85,
+                weight: 2,
+              }}
+            >
+              <LTooltip permanent direction="top" offset={[0, -6]}>
+                {port.label}
+                {isRecommendedReroute ? " ✓" : ""}
+              </LTooltip>
+            </CircleMarker>
+            <CircleMarker
+              center={[TUAS_MONITOR_POINT.lat, TUAS_MONITOR_POINT.lon]}
+              radius={6}
+              pathOptions={{
+                color: "#38bdf8",
+                fillColor: "#38bdf8",
+                fillOpacity: 0.9,
+                weight: 2,
+              }}
+            >
+              <LTooltip permanent direction="bottom" offset={[0, 6]}>
+                Tuas Mega Port
+              </LTooltip>
+            </CircleMarker>
+          </>
         )}
 
         {/* Vessels */}

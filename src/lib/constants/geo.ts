@@ -49,6 +49,25 @@ export const MARINE_LOCATIONS = {
 
 export type MarineLocationKey = keyof typeof MARINE_LOCATIONS;
 
+/**
+ * Approximate coordinates of the alternative reroute destinations used by the
+ * simulator, for drawing the reroute path on the vessel map. These are
+ * geographic locations, not live availability — the simulator's transit/cost
+ * remain user assumptions.
+ */
+export const ALTERNATIVE_PORTS: Record<
+  string,
+  { lat: number; lon: number; label: string }
+> = {
+  "tanjung-pelepas": {
+    lat: 1.363,
+    lon: 103.548,
+    label: "Port of Tanjung Pelepas",
+  },
+  "port-klang": { lat: 2.9997, lon: 101.3928, label: "Port Klang" },
+  "airfreight-changi": { lat: 1.3644, lon: 103.9915, label: "Changi (airfreight)" },
+};
+
 // ── Required disclaimers (§3) ──────────────────────────────────────────
 export const CONGESTION_DISCLAIMER =
   "AIS-based analytical estimate using vessel density, vessel speed and dwell indicators. This is not official PSA berth occupancy, queue or waiting-time data.";
