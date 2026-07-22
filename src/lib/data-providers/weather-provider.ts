@@ -33,6 +33,7 @@ interface NearestReading {
   value: number;
   stationName: string;
   timestamp: string;
+  distanceKm: number;
 }
 
 /** Fetch one NEA dataset and return the reading from the station nearest Tuas. */
@@ -62,7 +63,12 @@ async function nearestReading(
 
   const reading = item.readings.find((r) => r.station_id === best!.id);
   if (!reading) return null;
-  return { value: reading.value, stationName: best.name, timestamp: item.timestamp };
+  return {
+    value: reading.value,
+    stationName: best.name,
+    timestamp: item.timestamp,
+    distanceKm: best.dist,
+  };
 }
 
 /**
@@ -97,6 +103,20 @@ export async function fetchLiveWeather(
   const wd = val(windDir);
   const rh = val(humidity);
 
+  // NEA's temperature/wind/humidity networks are sometimes sparse (a single
+  // island-wide station), while rainfall has ~77 stations including Tuas. Anchor
+  // the displayed location to the CLOSEST station across the metrics we got, so
+  // a Tuas-area station is labelled rather than a far one 37 km away. Append the
+  // distance when it's not genuinely local (§11: don't pass far readings off as
+  // Tuas-specific without location context).
+  const headline = [t, rain, ws, rh]
+    .filter((r): r is NearestReading => r != null)
+    .reduce((a, b) => (b.distanceKm < a.distanceKm ? b : a), t);
+  const stationLabel =
+    headline.distanceKm > 8
+      ? `${headline.stationName} (~${Math.round(headline.distanceKm)} km from Tuas)`
+      : headline.stationName;
+
   return {
     // NEA rainfall is a 5-minute total (mm); convert to an approximate mm/hr.
     rainfallMmPerHr: rain ? Number((rain.value * 12).toFixed(1)) : null,
@@ -104,7 +124,7 @@ export async function fetchLiveWeather(
     windDirectionDegrees: wd ? wd.value : null,
     temperatureC: t.value,
     relativeHumidityPct: rh ? rh.value : null,
-    stationName: t.stationName,
-    observedAt: new Date(t.timestamp).toISOString(),
+    stationName: stationLabel,
+    observedAt: new Date(headline.timestamp).toISOString(),
   };
 }
