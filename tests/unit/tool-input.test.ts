@@ -25,8 +25,8 @@ const validSim = {
 };
 
 describe("Claude tool input validation", () => {
-  it("exposes all twelve tools", () => {
-    expect(TOOL_NAMES).toHaveLength(12);
+  it("exposes all thirteen tools", () => {
+    expect(TOOL_NAMES).toHaveLength(13);
     expect(isToolName("run_supply_chain_simulation")).toBe(true);
     expect(isToolName("definitely_not_a_tool")).toBe(false);
   });

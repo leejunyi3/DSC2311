@@ -7,7 +7,10 @@
 
 import type { DashboardSnapshot } from "@/types/snapshot";
 import { toolInputSchemas, isToolName, type ToolName } from "@/lib/schemas/tools";
-import { compareResponseOptions } from "@/lib/simulator/option-comparison";
+import {
+  compareResponseOptions,
+  suggestBestRoute,
+} from "@/lib/simulator/option-comparison";
 import { searchKnowledge } from "./knowledge-base";
 
 export interface ToolAuditEntry {
@@ -166,6 +169,13 @@ export function executeTool(
       // input already validated against the full simulationInputSchema.
       content = compareResponseOptions(
         input as unknown as Parameters<typeof compareResponseOptions>[0],
+      );
+      break;
+    }
+    case "suggest_best_route": {
+      sources = ["Deterministic simulator (best-route search across candidate ports)"];
+      content = suggestBestRoute(
+        input as unknown as Parameters<typeof suggestBestRoute>[0],
       );
       break;
     }

@@ -49,15 +49,27 @@ describe("tool runner", () => {
     expect(r.audit.dataSources.length).toBeGreaterThan(0);
   });
 
-  it("runs the simulator through compare_response_options", () => {
+  it("suggests the best route matching the snapshot", () => {
+    const r = executeTool(
+      "suggest_best_route",
+      snapshot.simulatorDefaults,
+      snapshot,
+    );
+    expect(r.ok).toBe(true);
+    const content = r.content as { recommendedKind: string };
+    // The dashboard snapshot's simulation is the best-route suggestion.
+    expect(content.recommendedKind).toBe(snapshot.simulation.recommendedKind);
+  });
+
+  it("runs a single-option comparison via compare_response_options", () => {
     const r = executeTool(
       "compare_response_options",
       snapshot.simulatorDefaults,
       snapshot,
     );
     expect(r.ok).toBe(true);
-    const content = r.content as { recommendedKind: string };
-    expect(content.recommendedKind).toBe(snapshot.simulation.recommendedKind);
+    const content = r.content as { options: unknown[] };
+    expect(Array.isArray(content.options)).toBe(true);
   });
 
   it("carries the required congestion disclaimer", () => {

@@ -83,11 +83,11 @@ export default function VesselMap({ snapshot }: { snapshot: DashboardSnapshot })
   const vessels = snapshot.vessels.data?.vessels ?? [];
   const lightning = snapshot.lightning.data;
 
-  // Reroute path: draw a line from Tuas to the scenario's alternative port.
-  const altKind = snapshot.simulatorDefaults.alternativeKind;
-  const port = ALTERNATIVE_PORTS[altKind];
-  const isRecommendedReroute = snapshot.simulation.recommendedKind === altKind;
-  const routeColor = isRecommendedReroute ? "#10b981" : "#f59e0b";
+  // Reroute path: draw the RECOMMENDED best route (Tuas → suggested port).
+  const recKind = snapshot.simulation.recommendedKind;
+  const port = ALTERNATIVE_PORTS[recKind];
+  const isRecommendedReroute = true; // this IS the recommendation
+  const routeColor = "#10b981";
   const rerouteExtra: [number, number][] = port
     ? [
         [TUAS_MONITOR_POINT.lat, TUAS_MONITOR_POINT.lon],

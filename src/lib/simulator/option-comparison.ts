@@ -136,18 +136,24 @@ function cheaper(a: ResponseOption, b: ResponseOption): ResponseOption {
   return a.delayHours <= b.delayHours ? a : b;
 }
 
-export function compareResponseOptions(
+/**
+ * Apply the project cargo-priority policy to a set of options and pick a
+ * recommendation. Shared by the single-alternative comparison and the
+ * suggest-best-route search.
+ */
+function recommendFrom(
+  options: ResponseOption[],
   input: SimulationInput,
+  extraAssumptions: string[],
 ): OptionComparisonResult {
-  const options = buildOptions(input);
-
   const assumptions: string[] = [
-    "Alternative-port transit times and costs are user or scenario assumptions — the system does not hold live availability, transit or pricing for other ports.",
+    "Alternative-port transit times and costs are assumptions — the system holds no live availability, transit or pricing for other ports.",
     "Inventory figures follow the deterministic formulas on the Methodology page.",
+    ...extraAssumptions,
   ];
 
-  // Project cargo-priority policy: for cold-chain cargo, avoid options that
-  // leave cold-chain exposure "critical" whenever a non-critical option exists.
+  // For cold-chain cargo, avoid options that leave cold-chain exposure
+  // "critical" whenever a non-critical option exists.
   const nonCriticalColdChain = options.filter(
     (o) => o.inventory.coldChainExposure !== "critical",
   );
@@ -156,7 +162,7 @@ export function compareResponseOptions(
       ? nonCriticalColdChain
       : options;
 
-  let recommended = pool.reduce(cheaper);
+  const recommended = pool.reduce(cheaper);
 
   let recommendationReason: string;
   if (
@@ -188,4 +194,107 @@ export function compareResponseOptions(
     assumptions,
     requiresHumanApproval,
   };
+}
+
+export function compareResponseOptions(
+  input: SimulationInput,
+): OptionComparisonResult {
+  return recommendFrom(buildOptions(input), input, []);
+}
+
+/**
+ * Default transit / handling / rerouting-cost ASSUMPTIONS per candidate port,
+ * roughly by distance from Tuas. Not live data — clearly labelled as
+ * assumptions; the planner can refine any port in the simulator.
+ */
+const CANDIDATE_ROUTES: ReadonlyArray<{
+  kind: AlternativeKind;
+  transitHours: number;
+  handlingHours: number;
+  reroutingCost: number;
+}> = [
+  { kind: "jurong-port", transitHours: 8, handlingHours: 4, reroutingCost: 12_000 },
+  { kind: "tanjung-pelepas", transitHours: 14, handlingHours: 6, reroutingCost: 38_000 },
+  { kind: "batam", transitHours: 14, handlingHours: 4, reroutingCost: 22_000 },
+  { kind: "johor-pasir-gudang", transitHours: 16, handlingHours: 6, reroutingCost: 20_000 },
+  { kind: "port-klang", transitHours: 30, handlingHours: 8, reroutingCost: 45_000 },
+  { kind: "penang", transitHours: 60, handlingHours: 8, reroutingCost: 70_000 },
+  { kind: "airfreight-changi", transitHours: 10, handlingHours: 4, reroutingCost: 90_000 },
+];
+
+/**
+ * Evaluate ALL candidate regional ports (plus wait and, if configured,
+ * emergency replenishment) and recommend the single best route — so the planner
+ * doesn't have to choose a port themselves. Uses the default per-port
+ * assumptions above; the core inventory inputs come from `input`.
+ */
+export function suggestBestRoute(input: SimulationInput): OptionComparisonResult {
+  const base = {
+    safetyStockDays: input.safetyStockDays,
+    dailyDemand: input.dailyDemand,
+    unitShortageCost: input.unitShortageCost,
+    coldChain: input.coldChain,
+    criticality: input.criticality,
+    customerPriority: input.customerPriority,
+  };
+
+  const options: ResponseOption[] = [];
+
+  options.push({
+    kind: "wait",
+    label: ALTERNATIVE_LABELS.wait,
+    delayHours: input.expectedDelayHours,
+    inventory: calculateInventory({
+      ...base,
+      effectiveDelayHours: input.expectedDelayHours,
+      additionalReroutingCost: 0,
+      emergencyReplenishmentCost: 0,
+    }),
+    notes: ["Assumes the current expected delay holds and no mitigation is taken."],
+  });
+
+  for (const r of CANDIDATE_ROUTES) {
+    const delay = r.transitHours + r.handlingHours;
+    options.push({
+      kind: r.kind,
+      label: ALTERNATIVE_LABELS[r.kind],
+      delayHours: delay,
+      inventory: calculateInventory({
+        ...base,
+        effectiveDelayHours: delay,
+        additionalReroutingCost: r.reroutingCost,
+        emergencyReplenishmentCost: 0,
+      }),
+      notes: [
+        `Transit ~${delay}h and $${r.reroutingCost.toLocaleString()} are default project assumptions for this port — refine in the simulator for precise figures.`,
+      ],
+    });
+  }
+
+  if (
+    input.emergencyReplenishmentQty > 0 ||
+    input.emergencyReplenishmentCost > 0
+  ) {
+    options.push({
+      kind: "custom",
+      label: "Emergency replenishment",
+      delayHours: input.emergencyReplenishmentLeadHours,
+      inventory: calculateInventory({
+        ...base,
+        effectiveDelayHours: input.emergencyReplenishmentLeadHours,
+        additionalReroutingCost: 0,
+        emergencyReplenishmentCost: input.emergencyReplenishmentCost,
+      }),
+      notes: ["Emergency lead time, quantity and cost are user-entered assumptions."],
+    });
+  }
+
+  // Show cheapest first so the ranked list reads well.
+  options.sort(
+    (a, b) => a.inventory.totalScenarioCost - b.inventory.totalScenarioCost,
+  );
+
+  return recommendFrom(options, input, [
+    "Best route chosen across candidate regional ports (Jurong, Tanjung Pelepas, Batam, Johor, Port Klang, Penang, Changi airfreight) using default transit/cost assumptions.",
+  ]);
 }

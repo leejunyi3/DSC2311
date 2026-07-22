@@ -94,11 +94,11 @@ export function SimulatorForm({ initial }: { initial: SimulationInput }) {
   const set = <K extends keyof SimulationInput>(key: K, value: SimulationInput[K]) =>
     setInput((prev) => ({ ...prev, [key]: value }));
 
-  async function run() {
+  async function execute(endpoint: "/api/simulator" | "/api/simulator/suggest") {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/simulator", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -116,6 +116,9 @@ export function SimulatorForm({ initial }: { initial: SimulationInput }) {
       setLoading(false);
     }
   }
+
+  const run = () => execute("/api/simulator");
+  const suggest = () => execute("/api/simulator/suggest");
 
   // Auto-run on first mount and whenever the seeded default changes.
   useEffect(() => {
@@ -158,15 +161,24 @@ export function SimulatorForm({ initial }: { initial: SimulationInput }) {
           <NumField label="Cost ($)" value={input.emergencyReplenishmentCost} onChange={(v) => set("emergencyReplenishmentCost", v)} />
         </div>
 
-        <button
-          onClick={run}
-          disabled={loading}
-          className="w-full rounded-lg bg-status-live/20 py-2 text-sm font-semibold text-status-live hover:bg-status-live/30 disabled:opacity-50"
-        >
-          {loading ? "Calculating…" : "Run simulation"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={run}
+            disabled={loading}
+            className="flex-1 rounded-lg border border-base-500 py-2 text-sm font-semibold text-slate-200 hover:bg-base-600 disabled:opacity-50"
+          >
+            {loading ? "Calculating…" : "Run this option"}
+          </button>
+          <button
+            onClick={suggest}
+            disabled={loading}
+            className="flex-1 rounded-lg bg-status-safe/20 py-2 text-sm font-semibold text-status-safe hover:bg-status-safe/30 disabled:opacity-50"
+          >
+            {loading ? "Calculating…" : "★ Suggest best route"}
+          </button>
+        </div>
         <p className="text-[11px] text-slate-500">
-          Alternative-port transit times and costs are your assumptions — the system holds no live availability or pricing for other ports.
+          <strong>Suggest best route</strong> evaluates all candidate ports (Jurong, Tanjung Pelepas, Batam, Johor, Port Klang, Penang, Changi) and picks the best. Alternative-port transit/cost are assumptions — the system holds no live pricing for other ports.
         </p>
       </div>
 

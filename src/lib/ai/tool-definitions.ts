@@ -145,6 +145,17 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
   {
+    name: "suggest_best_route",
+    description:
+      "Evaluate ALL candidate regional ports (Jurong, Tanjung Pelepas, Batam, Johor, Port Klang, Penang, Changi airfreight) plus waiting and emergency replenishment, and recommend the single best route — so you don't have to pick a port. Uses default per-port transit/cost assumptions (stated as assumptions). The alternativeKind/transit/cost fields are ignored for the ports but still required by the schema; pass the scenario's values.",
+    input_schema: {
+      type: "object",
+      properties: SIM_PROPERTIES,
+      required: SIM_REQUIRED,
+      additionalProperties: false,
+    },
+  },
+  {
     name: "search_institutional_knowledge",
     description:
       "Search the project's institutional knowledge (operating principles, cargo-priority policy, source hierarchy, risk methodology, data limitations, human-approval policy).",

@@ -50,7 +50,7 @@ import { fetchLiveDisruptions } from "@/lib/data-providers/disruption-provider";
 import { calculateCongestion } from "@/lib/risk/congestion-engine";
 import { calculateConfidence } from "@/lib/risk/confidence-engine";
 import { calculateResilienceRisk } from "@/lib/risk/risk-engine";
-import { compareResponseOptions } from "@/lib/simulator/option-comparison";
+import { suggestBestRoute } from "@/lib/simulator/option-comparison";
 import { cacheGet, cacheSet } from "@/lib/cache/memory-cache";
 import { ageSecondsFrom } from "@/lib/risk/freshness-engine";
 import { SeededRng } from "@/lib/utils/prng";
@@ -432,7 +432,8 @@ export async function buildSnapshot(
 
   // ── Simulator (scenario defaults) ──
   const simulatorDefaults: SimulationInput = { ...fx.simulatorDefaults };
-  const simulation = compareResponseOptions(simulatorDefaults);
+  // Suggest the BEST route across candidate ports (the agent chooses, not the user).
+  const simulation = suggestBestRoute(simulatorDefaults);
   const waitOption = simulation.options.find((o) => o.kind === "wait");
 
   // ── Risk ──

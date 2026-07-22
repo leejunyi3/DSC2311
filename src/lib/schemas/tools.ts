@@ -33,6 +33,7 @@ export const toolInputSchemas = {
   calculate_resilience_risk: emptyInput,
   run_supply_chain_simulation: simulationInputSchema,
   compare_response_options: simulationInputSchema,
+  suggest_best_route: simulationInputSchema,
   search_institutional_knowledge: z
     .object({
       query: z.string().min(1).max(400),
